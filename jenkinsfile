@@ -6,45 +6,33 @@ pipeline {
         go 'go1.18'
     }
 
-    stages {
-        stage('Copy source code') {
-            steps {
-                git 'https://github.com/fabiano182/gofiber-unit-tests.git'
-            }
-        }
+    parameters {
+        choice(name: 'OS', choices: ['linux', 'darwin'], description: 'Choose the OS to build for')
+    }
 
+    stages {
         stage('Test') {
             steps {
-                sh 'go test'
+                sh 'go test *.go'
             }
         }
 
         stage('Build') {
-            matrix {
-                axes {
-                    axis {
-                        name 'OS'
-                        values 'linux', 'darwin'
-                    }
+            steps {
+            script {
+                def goos = ""
+                def output = ""
+                if (params.OS == 'linux') {
+                    goos = 'linux'
+                    output = 'app-linux'
+                    echo 'Building for Linux'
+                } else if (params.OS == 'darwin') {
+                    goos = 'darwin'
+                    output = 'app-macos'
+                    echo 'Building for MacOS'
                 }
-                stages {
-                    stage("Build for \${OS}") {
-                        steps {
-                            script {
-                                def goos = ""
-                                def output = ""
-                                if (env.OS == 'linux') {
-                                    goos = 'linux'
-                                    output = 'app-linux'
-                                } else if (env.OS == 'darwin') {
-                                    goos = 'darwin'
-                                    output = 'app-macos'
-                                }
-                                sh "GOOS=\${goos} GOARCH=amd64 go build -o \${output} main.go"
-                            }
-                        }
-                    }
-                }
+                sh "GOOS=${goos} GOARCH=amd64 go build -o ${output} main.go"
+            }
             }
         }
     }
