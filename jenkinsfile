@@ -1,0 +1,51 @@
+pipeline {
+    agent any
+
+    // Esse pipeline usa o plugin para golang
+    tools {
+        go 'go1.18'
+    }
+
+    stages {
+        stage('Copy source code') {
+            steps {
+                git 'https://github.com/fabiano182/gofiber-unit-tests.git'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'go test'
+            }
+        }
+
+        stage('Build') {
+            matrix {
+                axes {
+                    axis {
+                        name 'OS'
+                        values 'linux', 'darwin'
+                    }
+                }
+                stages {
+                    stage("Build for \${OS}") {
+                        steps {
+                            script {
+                                def goos = ""
+                                def output = ""
+                                if (env.OS == 'linux') {
+                                    goos = 'linux'
+                                    output = 'app-linux'
+                                } else if (env.OS == 'darwin') {
+                                    goos = 'darwin'
+                                    output = 'app-macos'
+                                }
+                                sh "GOOS=\${goos} GOARCH=amd64 go build -o \${output} main.go"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
